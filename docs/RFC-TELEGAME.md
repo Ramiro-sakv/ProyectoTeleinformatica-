@@ -223,3 +223,90 @@ ERR comando desconocido: <comando>
 - El servidor valida nombres y movimientos.
 - Si un jugador abandona, el rival recibe `RESULT ABORT`.
 - No hay un numero maximo fijo de clientes en el codigo. El limite practico depende del sistema operativo, memoria y `FD_SETSIZE` usado por `select`.
+
+## 14. Estructuras de datos de la implementacion
+
+La implementacion principal esta en `src/server.c`.
+
+### `struct Player`
+
+Representa a un jugador conectado al servidor.
+
+| Campo | Rol |
+| --- | --- |
+| `fd` | Descriptor del socket TCP asociado al cliente. |
+| `address` | Direccion IP del cliente en texto. |
+| `port` | Puerto remoto del cliente. |
+| `name` | Nombre registrado con `HELLO`. |
+| `registered` | Indica si el cliente ya completo su registro. |
+| `buffer` | Buffer de recepcion para mensajes TCP incompletos. |
+| `buffer_len` | Cantidad de bytes usados dentro del buffer. |
+| `in_queue` | Indica si el jugador esta esperando rival. |
+| `game_id` | Identificador de la partida activa; `0` si no esta jugando. |
+| `symbol` | Simbolo asignado en la partida: `X`, `O` o vacio. |
+| `wins`, `losses`, `draws` | Registro efimero de resultados mientras el servidor esta ejecutandose. |
+| `next` | Enlace a la lista dinamica de jugadores conectados. |
+| `queue_next` | Enlace a la cola dinamica de espera. |
+
+### `struct Game`
+
+Representa una partida 1 vs 1.
+
+| Campo | Rol |
+| --- | --- |
+| `id` | Identificador incremental de la partida. |
+| `x_player` | Jugador asignado al simbolo `X`. |
+| `o_player` | Jugador asignado al simbolo `O`. |
+| `board` | Tablero de 9 posiciones. |
+| `turn` | Simbolo que debe jugar en el turno actual. |
+| `next` | Enlace a la lista dinamica de partidas activas. |
+
+## 15. Mapa de implementacion
+
+| Requisito | Archivo y linea aproximada |
+| --- | --- |
+| Estructura dinamica de jugadores | `src/server.c`, desde linea 24 (`struct Player`). |
+| Estructura de partidas | `src/server.c`, desde linea 42 (`struct Game`). |
+| Cola de espera | `src/server.c`, lineas 156 y 168 (`enqueue_player`, `dequeue_player`). |
+| Multiplexacion con `select` | `src/server.c`, linea 702. |
+| Aceptar conexiones | `src/server.c`, linea 597 (`accept_player`). |
+| Registro con `HELLO` | `src/server.c`, linea 359 (`handle_hello`). |
+| Interpretacion de comandos | `src/server.c`, linea 492 (`handle_command`). |
+| Recepcion de mensajes TCP | `src/server.c`, linea 555 (`receive_from_player`). |
+| Envio de respuestas | `src/server.c`, linea 80 (`send_line`). |
+| Listado de jugadores | `src/server.c`, linea 287 (`send_players_to`). |
+| Marcador | `src/server.c`, linea 277 (`send_score_to`). |
+| Creacion de partida | `src/server.c`, linea 306 (`create_match`). |
+| Validacion de movimientos | `src/server.c`, linea 400 (`handle_move`). |
+| Cliente: lectura de mensajes del servidor | `src/client.c`, linea 95 (`process_received_data`). |
+| Cliente: interpretacion visual de respuestas | `src/client.c`, linea 31 (`print_server_message`). |
+| Cliente: multiplexacion teclado/socket | `src/client.c`, linea 163 (`select`). |
+
+Los numeros pueden cambiar si el codigo se edita, pero los nombres de funciones se mantienen como referencia principal.
+
+## 16. Elementos investigados
+
+Estos elementos pertenecen a la API POSIX de sockets en Linux:
+
+- `socket(2)`: crea un endpoint TCP.
+- `setsockopt(2)`: configura opciones del socket, por ejemplo `SO_REUSEADDR`.
+- `bind(2)`: asocia el servidor a una IP y puerto.
+- `listen(2)`: pone el socket del servidor en modo escucha.
+- `accept(2)`: acepta una conexion entrante.
+- `select(2)`: permite atender varios descriptores sin `fork` ni `pthread`.
+- `recv(2)`: recibe bytes enviados por un cliente.
+- `send(2)`: envia bytes hacia un cliente.
+- `inet_pton(3)` e `inet_ntop(3)`: convierten direcciones IP entre texto y formato binario.
+
+Referencias consultables en Linux Mint:
+
+```bash
+man 2 socket
+man 2 bind
+man 2 listen
+man 2 accept
+man 2 select
+man 2 recv
+man 2 send
+man 3 inet_pton
+```

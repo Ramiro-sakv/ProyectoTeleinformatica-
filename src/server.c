@@ -85,6 +85,9 @@ static int send_line(Player *player, const char *format, ...) {
     vsnprintf(line, sizeof(line), format, args);
     va_end(args);
 
+    printf("[TX -> %s] %s\n", player->registered ? player->name : player->address, line);
+    fflush(stdout);
+
     strncat(line, "\n", sizeof(line) - strlen(line) - 1);
     return send_all(player->fd, line);
 }
@@ -547,6 +550,8 @@ static int process_player_line(Player *player, char *line) {
         line[--length] = '\0';
     }
     if (length > 0) {
+        printf("[RX <- %s] %s\n", player->registered ? player->name : player->address, line);
+        fflush(stdout);
         return handle_command(player, line);
     }
     return 1;

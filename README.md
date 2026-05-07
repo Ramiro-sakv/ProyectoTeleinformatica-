@@ -25,17 +25,19 @@ El proyecto no usa librerias externas. Solo requiere GCC, Make y las cabeceras P
 
 ```text
 .
-├── Makefile
-├── README.md
-├── docs/
-│   └── RFC-TELEGAME.md
-├── scripts/
-│   └── install_telegame_local.sh
-├── src/
-│   ├── client.c
-│   └── server.c
-└── tests/
-    └── smoke_test.sh
+|-- Makefile
+|-- README.md
+|-- docs/
+|   |-- RFC-TELEGAME.md
+|   |-- DEFENSA.md
+|   `-- PROMPT_CHATGPT.md
+|-- scripts/
+|   `-- install_telegame_local.sh
+|-- src/
+|   |-- client.c
+|   `-- server.c
+`-- tests/
+    `-- smoke_test.sh
 ```
 
 ## Compilar
@@ -61,7 +63,7 @@ make clean
 
 ## Ejecucion rapida en una sola computadora
 
-Abre tres terminales en Linux Mint o en la terminal integrada de Visual Studio Code.
+Abre cuatro terminales en Linux Mint o en la terminal integrada de Visual Studio Code: una para el servidor y tres para clientes.
 
 Terminal 1, servidor:
 
@@ -81,13 +83,19 @@ Terminal 3, jugador 2:
 ./bin/telegame_client --host 127.0.0.1 --port 5000 --name Bob
 ```
 
-En ambos clientes escribe:
+Terminal 4, jugador 3:
+
+```bash
+./bin/telegame_client --host 127.0.0.1 --port 5000 --name Carla
+```
+
+En los clientes puedes escribir `PLAYERS` para demostrar que hay tres jugadores registrados. Luego, en dos clientes escribe:
 
 ```text
 QUEUE
 ```
 
-El servidor crea la partida, asigna `X` y `O`, muestra participantes, tablero y turno actual.
+El servidor crea la partida, asigna `X` y `O`, muestra participantes, tablero y turno actual. El tercer cliente queda en `LOBBY` y puede seguir interactuando con comandos como `PLAYERS` y `SCORE`.
 
 ## Ejecucion desde dos computadoras
 
@@ -146,15 +154,16 @@ Las casillas del tablero son:
 
 1. Ejecutar `make`.
 2. Iniciar el servidor con `./bin/telegame_server --host 127.0.0.1 --port 5000`.
-3. Abrir dos clientes con nombres distintos.
-4. Enviar `PLAYERS` para mostrar participantes conectados.
-5. En ambos clientes enviar `QUEUE`.
+3. Abrir tres clientes con nombres distintos: `Alice`, `Bob` y `Carla`.
+4. Enviar `PLAYERS` para mostrar los tres participantes conectados.
+5. En `Alice` y `Bob` enviar `QUEUE`. Dejar a `Carla` en lobby.
 6. Mostrar que el servidor asigna `X` y `O`.
-7. Jugar movimientos con `MOVE <casilla>`.
-8. Probar un error, por ejemplo que Bob juegue cuando el turno es de Alice.
-9. Completar una partida y mostrar `RESULT WIN X Alice` o `RESULT DRAW`.
-10. Al terminar, el servidor muestra automaticamente participantes en lobby y marcador.
-11. Si quieren jugar otra vez, ambos jugadores escriben `QUEUE`.
+7. Mientras Alice y Bob juegan, desde Carla enviar `PLAYERS` o `SCORE` para demostrar que un cliente fuera de partida sigue interactuando con el servidor.
+8. Jugar movimientos con `MOVE <casilla>`.
+9. Probar un error, por ejemplo que Bob juegue cuando el turno es de Alice.
+10. Completar una partida y mostrar `RESULT WIN X Alice` o `RESULT DRAW`.
+11. Al terminar, el servidor muestra automaticamente participantes en lobby y marcador.
+12. Si quieren jugar otra vez, ambos jugadores escriben `QUEUE`.
 
 Ejemplo donde gana `X`:
 
@@ -176,6 +185,12 @@ Servidor: PLAYER Alice LOBBY
 Servidor: SCORE Bob 0 0 1
 Servidor: SCORE Alice 1 0 0
 ```
+
+## Documentos para la defensa
+
+- `docs/RFC-TELEGAME.md`: protocolo completo.
+- `docs/DEFENSA.md`: guia tecnica para explicar el proyecto.
+- `docs/PROMPT_CHATGPT.md`: prompt para pedir ayuda con la parte personal de IA y conclusiones.
 
 ## Pruebas
 
