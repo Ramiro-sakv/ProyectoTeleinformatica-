@@ -103,10 +103,23 @@ expect_line 4 "BOARD XXXOO...."
 expect_line 3 "RESULT WIN X Alice"
 expect_line 4 "RESULT WIN X Alice"
 
-printf 'SCORE\n' >&3
+expect_line 3 "INFO PARTIDA FINALIZADA: los jugadores vuelven al lobby"
+expect_line 3 "INFO PARTICIPANTES conectados=2 en_cola=0 partidas=0"
+expect_line 3 "PLAYER Bob LOBBY"
+expect_line 3 "PLAYER Alice LOBBY"
 expect_line 3 "INFO MARCADOR"
 expect_line 3 "SCORE Bob 0 0 1"
 expect_line 3 "SCORE Alice 1 0 0"
+expect_line 3 "INFO Para jugar otra partida escribe QUEUE"
+
+expect_line 4 "INFO PARTIDA FINALIZADA: los jugadores vuelven al lobby"
+expect_line 4 "INFO PARTICIPANTES conectados=2 en_cola=0 partidas=0"
+expect_line 4 "PLAYER Bob LOBBY"
+expect_line 4 "PLAYER Alice LOBBY"
+expect_line 4 "INFO MARCADOR"
+expect_line 4 "SCORE Bob 0 0 1"
+expect_line 4 "SCORE Alice 1 0 0"
+expect_line 4 "INFO Para jugar otra partida escribe QUEUE"
 
 exec 3>&-
 exec 4>&-

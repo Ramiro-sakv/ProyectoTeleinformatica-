@@ -84,6 +84,8 @@ Responsabilidades del servidor:
 | `RESULT ABORT <texto>` | Partida terminada por abandono o desconexion. |
 | `BYE <texto>` | Cierre normal de sesion. |
 
+Despues de `RESULT WIN` o `RESULT DRAW`, el servidor envia automaticamente a ambos jugadores el estado de participantes (`PLAYER`), el marcador (`SCORE`) y una indicacion para volver a jugar con `QUEUE`.
+
 ## 8. Representacion del tablero
 
 El servidor envia una cadena de 9 caracteres:
@@ -187,6 +189,14 @@ Alice -> Servidor: MOVE 3
 
 Servidor -> ambos: BOARD XXXOO....
 Servidor -> ambos: RESULT WIN X Alice
+Servidor -> ambos: INFO PARTIDA FINALIZADA: los jugadores vuelven al lobby
+Servidor -> ambos: INFO PARTICIPANTES conectados=2 en_cola=0 partidas=0
+Servidor -> ambos: PLAYER Bob LOBBY
+Servidor -> ambos: PLAYER Alice LOBBY
+Servidor -> ambos: INFO MARCADOR
+Servidor -> ambos: SCORE Bob 0 0 1
+Servidor -> ambos: SCORE Alice 1 0 0
+Servidor -> ambos: INFO Para jugar otra partida escribe QUEUE
 
 Alice -> Servidor: SCORE
 Servidor -> Alice: INFO MARCADOR

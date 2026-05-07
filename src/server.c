@@ -292,6 +292,17 @@ static void send_players_to(Player *receiver) {
     }
 }
 
+static void send_post_game_status(Player *x_player, Player *o_player) {
+    Player *receivers[2] = {x_player, o_player};
+
+    for (int i = 0; i < 2; i++) {
+        send_line(receivers[i], "INFO PARTIDA FINALIZADA: los jugadores vuelven al lobby");
+        send_players_to(receivers[i]);
+        send_score_to(receivers[i]);
+        send_line(receivers[i], "INFO Para jugar otra partida escribe QUEUE");
+    }
+}
+
 static void create_match(Player *x_player, Player *o_player) {
     Game *game = calloc(1, sizeof(*game));
     if (!game) {
@@ -416,6 +427,8 @@ static void handle_move(Player *player, char *argument) {
     broadcast_game(game, "BOARD %s", game->board);
     winner = winner_of(game);
     if (winner) {
+        Player *x_player = game->x_player;
+        Player *o_player = game->o_player;
         Player *winner_player = player_for_symbol(game, winner);
         Player *loser_player = opponent_of(game, winner_player);
         winner_player->wins++;
@@ -425,15 +438,19 @@ static void handle_move(Player *player, char *argument) {
                game->id, winner_player->name, winner);
         fflush(stdout);
         finish_game(game);
+        send_post_game_status(x_player, o_player);
         return;
     }
     if (is_draw(game)) {
+        Player *x_player = game->x_player;
+        Player *o_player = game->o_player;
         game->x_player->draws++;
         game->o_player->draws++;
         broadcast_game(game, "RESULT DRAW");
         printf("Partida %d terminada: empate\n", game->id);
         fflush(stdout);
         finish_game(game);
+        send_post_game_status(x_player, o_player);
         return;
     }
 

@@ -153,7 +153,8 @@ Las casillas del tablero son:
 7. Jugar movimientos con `MOVE <casilla>`.
 8. Probar un error, por ejemplo que Bob juegue cuando el turno es de Alice.
 9. Completar una partida y mostrar `RESULT WIN X Alice` o `RESULT DRAW`.
-10. Enviar `SCORE` para mostrar ganador y marcador.
+10. Al terminar, el servidor muestra automaticamente participantes en lobby y marcador.
+11. Si quieren jugar otra vez, ambos jugadores escriben `QUEUE`.
 
 Ejemplo donde gana `X`:
 
@@ -169,6 +170,11 @@ Alice: MOVE 2
 Bob:   MOVE 5
 Alice: MOVE 3
 Servidor: RESULT WIN X Alice
+Servidor: INFO PARTIDA FINALIZADA: los jugadores vuelven al lobby
+Servidor: PLAYER Bob LOBBY
+Servidor: PLAYER Alice LOBBY
+Servidor: SCORE Bob 0 0 1
+Servidor: SCORE Alice 1 0 0
 ```
 
 ## Pruebas
