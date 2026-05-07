@@ -1,123 +1,138 @@
 # Proyecto Final Telegame
 
-Telegame es un sistema cliente-servidor para la materia de Teleinformática. El servidor maestro acepta clientes dinámicos y gestiona completamente el juego, sin comunicación directa entre jugadores.
+Telegame es un sistema cliente-servidor escrito en C para Linux. El servidor maestro acepta clientes dinamicos, empareja jugadores 1 vs 1, valida turnos y administra completamente el juego de tres en raya. Los clientes no se comunican directamente entre si: todo pasa por el servidor.
 
 ## Arquitectura
 
-- **Servidor maestro**: acepta cualquier cantidad de clientes, sin un máximo fijo definido en el código.
-- **Multiplexación con `select`**: un solo proceso atiende múltiples sockets TCP.
-- **Juego gestionado por servidor**: los clientes solo envían comandos; el servidor valida turnos, movimientos, victorias y empates.
-- **Modo implementado**: 1 vs 1 usando tres en raya.
+- Servidor maestro con n clientes dinamicos, sin un numero maximo fijo definido en el codigo.
+- Servidor multiplexico con `select`, un solo proceso atiende el socket de escucha y todos los clientes conectados.
+- Juego gestionado por el servidor: participantes, cola, turnos, tablero, ganador, empate y abandono.
+- Modo implementado: 1 vs 1. Si hay mas de dos jugadores, el servidor empareja de dos en dos desde la cola, permitiendo una demo tipo todos contra todos por rondas.
+- Protocolo de texto `TELEGAME/1.0` sobre TCP.
 
-## Requisitos
+## Requisitos en Linux Mint
 
-- Linux.
-- Python 3.10 o superior recomendado.
-- No requiere librerías externas.
+Instalar herramientas de compilacion:
+
+```bash
+sudo apt update
+sudo apt install build-essential make
+```
+
+El proyecto no usa librerias externas. Solo requiere GCC, Make y las cabeceras POSIX normales de Linux.
 
 ## Estructura
 
 ```text
 .
+├── Makefile
 ├── README.md
 ├── docs/
 │   └── RFC-TELEGAME.md
+├── scripts/
+│   └── install_telegame_local.sh
 ├── src/
-│   ├── client.py
-│   └── server.py
+│   ├── client.c
+│   └── server.c
 └── tests/
-    └── smoke_test.py
+    └── smoke_test.sh
 ```
 
-## Ejecución rápida en una sola computadora
+## Compilar
 
-Este modo sirve para probar la lógica usando tres terminales en el mismo Linux.
-
-En una terminal inicia el servidor:
+Desde la carpeta del proyecto:
 
 ```bash
-python3 src/server.py --host 127.0.0.1 --port 5000
+make
 ```
 
-En otra terminal abre el primer cliente:
+Esto genera:
+
+```text
+bin/telegame_server
+bin/telegame_client
+```
+
+Para limpiar binarios:
 
 ```bash
-python3 src/client.py --host 127.0.0.1 --port 5000 --name Alice
+make clean
 ```
 
-En una tercera terminal abre el segundo cliente:
+## Ejecucion rapida en una sola computadora
+
+Abre tres terminales en Linux Mint o en la terminal integrada de Visual Studio Code.
+
+Terminal 1, servidor:
 
 ```bash
-python3 src/client.py --host 127.0.0.1 --port 5000 --name Bob
+./bin/telegame_server --host 127.0.0.1 --port 5000
 ```
 
-## Ejecución desde dos computadoras
+Terminal 2, jugador 1:
 
-Sí, el proyecto puede jugarse desde dos computadoras. Para eso una computadora ejecuta el servidor y las dos computadoras ejecutan clientes que se conectan a la IP del servidor.
+```bash
+./bin/telegame_client --host 127.0.0.1 --port 5000 --name Alice
+```
 
-### 1. En la computadora servidor
+Terminal 3, jugador 2:
 
-Obtén la IP de la computadora servidor en la red o VPN:
+```bash
+./bin/telegame_client --host 127.0.0.1 --port 5000 --name Bob
+```
+
+En ambos clientes escribe:
+
+```text
+QUEUE
+```
+
+El servidor crea la partida, asigna `X` y `O`, muestra participantes, tablero y turno actual.
+
+## Ejecucion desde dos computadoras
+
+En la computadora que sera servidor, revisa su IP:
 
 ```bash
 ip addr
 ```
 
-Busca una IP parecida a `192.168.x.x`, `10.x.x.x` o la IP asignada por la VPN. En estos ejemplos usaremos `192.168.1.50`; cámbiala por la IP real de tu servidor.
+Ejemplo de IP: `192.168.1.50`.
 
-Inicia el servidor escuchando en todas las interfaces de red:
+Inicia el servidor escuchando en todas las interfaces:
 
 ```bash
-python3 src/server.py --host 0.0.0.0 --port 5000
+./bin/telegame_server --host 0.0.0.0 --port 5000
 ```
 
-Si tienes firewall activo, permite el puerto TCP 5000. Por ejemplo, con UFW:
+Si el firewall esta activo:
 
 ```bash
 sudo ufw allow 5000/tcp
 ```
 
-### 2. En la computadora del jugador 1
-
-Conéctate usando la IP real del servidor:
+En cada computadora cliente, usa la IP real del servidor:
 
 ```bash
-python3 src/client.py --host 192.168.1.50 --port 5000 --name Alice
+./bin/telegame_client --host 192.168.1.50 --port 5000 --name Alice
+./bin/telegame_client --host 192.168.1.50 --port 5000 --name Bob
 ```
 
-### 3. En la computadora del jugador 2
+Importante: `127.0.0.1` solo sirve para conectarse a la misma computadora. Para dos computadoras usa la IP LAN o VPN del servidor.
 
-Conéctate a la misma IP del servidor:
-
-```bash
-python3 src/client.py --host 192.168.1.50 --port 5000 --name Bob
-```
-
-Importante: `127.0.0.1` solo sirve para conectarse a la misma computadora. Para dos computadoras debes usar la IP de red/VPN del servidor.
-
-## Cómo se juega
-
-1. Cada jugador entra al cliente.
-2. Cada jugador escribe `QUEUE` y presiona Enter.
-3. El servidor empareja automáticamente a dos jugadores.
-4. El servidor responde con `MATCH`: a un jugador le asigna `X` y al otro `O`.
-5. Siempre empieza `X`.
-6. Cuando el servidor muestre `TURN X`, juega quien tenga `X`; cuando muestre `TURN O`, juega quien tenga `O`.
-7. Para marcar una casilla escribe `MOVE <numero>`, por ejemplo `MOVE 5`.
-8. Gana quien complete una fila, columna o diagonal. Si nadie gana y se llena el tablero, hay empate.
-
-Comandos útiles dentro del cliente:
+## Comandos del cliente
 
 ```text
-HELP
-QUEUE
-MOVE 1
-MOVE 5
-BOARD
-QUIT
+HELP              Muestra comandos disponibles.
+QUEUE             Entra a la cola de espera.
+PLAYERS           Muestra participantes conectados y su estado.
+SCORE             Muestra victorias, empates y derrotas.
+BOARD             Muestra tablero y turno actual.
+MOVE <1-9>        Marca una casilla si es tu turno.
+QUIT              Sale del sistema o abandona la partida.
 ```
 
-Las casillas del tablero van del 1 al 9:
+Las casillas del tablero son:
 
 ```text
 1 | 2 | 3
@@ -127,41 +142,41 @@ Las casillas del tablero van del 1 al 9:
 7 | 8 | 9
 ```
 
-Ejemplo de partida rápida donde gana `X` arriba:
+## Demo sugerida para la defensa
+
+1. Ejecutar `make`.
+2. Iniciar el servidor con `./bin/telegame_server --host 127.0.0.1 --port 5000`.
+3. Abrir dos clientes con nombres distintos.
+4. Enviar `PLAYERS` para mostrar participantes conectados.
+5. En ambos clientes enviar `QUEUE`.
+6. Mostrar que el servidor asigna `X` y `O`.
+7. Jugar movimientos con `MOVE <casilla>`.
+8. Probar un error, por ejemplo que Bob juegue cuando el turno es de Alice.
+9. Completar una partida y mostrar `RESULT WIN X Alice` o `RESULT DRAW`.
+10. Enviar `SCORE` para mostrar ganador y marcador.
+
+Ejemplo donde gana `X`:
 
 ```text
 Alice: QUEUE
 Bob:   QUEUE
 Alice recibe: MATCH 1 X Bob
 Bob recibe:   MATCH 1 O Alice
+Servidor:     TURN X Alice
 Alice: MOVE 1
 Bob:   MOVE 4
 Alice: MOVE 2
 Bob:   MOVE 5
 Alice: MOVE 3
-Servidor: RESULT WIN X
+Servidor: RESULT WIN X Alice
 ```
-
-## Demo sugerida
-
-1. Ejecutar el servidor.
-2. Conectar dos clientes.
-3. En ambos clientes enviar `QUEUE`.
-4. Mostrar que el servidor empareja jugadores.
-5. Jugar turnos usando `MOVE <casilla>`.
-6. Mostrar que el servidor rechaza movimientos inválidos o fuera de turno.
-7. Finalizar una partida con victoria o empate.
 
 ## Pruebas
 
-Compilar/verificar sintaxis:
+Ejecuta:
 
 ```bash
-python3 -m py_compile src/server.py src/client.py tests/smoke_test.py
+make test
 ```
 
-Ejecutar prueba automática básica:
-
-```bash
-python3 tests/smoke_test.py
-```
+La prueba compila el servidor y cliente, levanta el servidor localmente, conecta dos jugadores usando TCP, juega una partida y valida turno, tablero, ganador y marcador.
