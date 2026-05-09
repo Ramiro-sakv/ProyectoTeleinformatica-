@@ -9,6 +9,9 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{listings}
+\usepackage{tikz}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.multipart,fit,backgrounds}
 
 \geometry{margin=2.5cm}
 
@@ -98,19 +101,91 @@ estado oficial del tablero y evite inconsistencias entre clientes.
 
 \subsection{Diagrama general}
 
-\begin{lstlisting}[style=code]
-+-----------+        TCP         +---------------------+        TCP        +-----------+
-| Cliente A | <----------------> | Servidor maestro    | <---------------> | Cliente B |
-| Jugador X |                    | select + juego      |                   | Jugador O |
-+-----------+                    +---------------------+                   +-----------+
-                                      ^
-                                      |
-                                      | TCP
-                                      |
-                                  +-----------+
-                                  | Cliente N |
-                                  +-----------+
-\end{lstlisting}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    node distance=2.4cm,
+    box/.style={
+        draw,
+        rounded corners=4pt,
+        very thick,
+        align=center,
+        minimum width=3.2cm,
+        minimum height=1.45cm,
+        fill=blue!6
+    },
+    server/.style={
+        draw,
+        rounded corners=4pt,
+        very thick,
+        align=center,
+        minimum width=4.3cm,
+        minimum height=1.8cm,
+        fill=green!9
+    },
+    note/.style={
+        draw,
+        rounded corners=3pt,
+        align=center,
+        fill=yellow!15,
+        font=\small,
+        inner sep=5pt
+    },
+    arrow/.style={
+        <->,
+        very thick,
+        -{Stealth[length=3mm]}
+    }
+]
+
+\node[server] (srv) {
+    \textbf{Servidor maestro}\\
+    TCP :5000\\
+    \texttt{select + juego}
+};
+
+\node[box, left=3.4cm of srv] (a) {
+    \textbf{Cliente A}\\
+    Jugador X\\
+    Ramiro
+};
+
+\node[box, right=3.4cm of srv] (b) {
+    \textbf{Cliente B}\\
+    Jugador O\\
+    Paulo
+};
+
+\node[box, below=2.6cm of srv] (n) {
+    \textbf{Cliente N}\\
+    Lobby / consulta\\
+    Carla
+};
+
+\node[note, above=1.1cm of srv] (logic) {
+    El servidor central valida\\
+    turnos, movimientos y resultados
+};
+
+\draw[arrow] (a) -- node[above]{TCP} node[below]{comandos/respuestas} (srv);
+\draw[arrow] (srv) -- node[above]{TCP} node[below]{comandos/respuestas} (b);
+\draw[arrow] (n) -- node[right]{TCP} (srv);
+\draw[very thick, -{Stealth[length=3mm]}] (logic) -- (srv);
+
+\begin{scope}[on background layer]
+    \node[
+        draw=gray!45,
+        rounded corners=8pt,
+        fill=gray!5,
+        inner sep=12pt,
+        fit=(a)(srv)(b)(n)(logic)
+    ] {};
+\end{scope}
+
+\end{tikzpicture}
+\caption{Arquitectura cliente-servidor de Telegame.}
+\label{fig:arquitectura-telegame}
+\end{figure}
 
 \subsection{Responsabilidades del servidor}
 

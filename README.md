@@ -192,6 +192,7 @@ Servidor: SCORE Alice 1 0 0
 - `docs/DEFENSA.md`: guia tecnica para explicar el proyecto.
 - `docs/PROMPT_CHATGPT.md`: prompt para pedir ayuda con la parte personal de IA y conclusiones.
 - `docs/INFORME_TELEGAME.tex`: informe completo en LaTeX.
+- `docs/diagrama_arquitectura.svg`: diagrama visual de la arquitectura.
 
 Para abrir el informe en Visual Studio Code:
 
@@ -203,6 +204,12 @@ Si tienes LaTeX instalado, puedes generar PDF asi:
 
 ```bash
 pdflatex docs/INFORME_TELEGAME.tex
+```
+
+Si falta el paquete de diagramas TikZ:
+
+```bash
+sudo apt install texlive-pictures
 ```
 
 ## Pruebas
