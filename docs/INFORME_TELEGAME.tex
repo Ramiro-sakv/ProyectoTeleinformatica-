@@ -1,0 +1,646 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+
+\geometry{margin=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\lstdefinestyle{code}{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false
+}
+
+\title{
+    \textbf{Proyecto Final Telegame}\\
+    \large Informe tecnico de Teleinformatica
+}
+\author{
+    Estudiante: \underline{\hspace{8cm}}\\
+    Codigo: \underline{\hspace{8cm}}\\
+    Materia: Teleinformatica
+}
+\date{Mayo de 2026}
+
+\begin{document}
+
+\maketitle
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Introduccion}
+
+Telegame es un sistema cliente-servidor desarrollado en lenguaje C para Linux.
+El objetivo del proyecto es implementar un servicio de red donde varios jugadores
+puedan conectarse a un servidor central, registrarse, consultar participantes,
+entrar a una cola de espera y jugar una partida de tres en raya.
+
+La aplicacion fue disenada para cumplir los requisitos de la materia de
+Teleinformatica: usar sockets TCP, mantener un servidor central, permitir varios
+clientes dinamicos, administrar el juego desde el servidor y documentar el
+protocolo utilizado siguiendo una estructura similar a un RFC.
+
+El juego elegido es tres en raya porque permite demostrar claramente los
+conceptos importantes del proyecto: registro de jugadores, turnos, validacion de
+comandos, validacion de movimientos, tablero, ganador, empate, abandono y
+marcador.
+
+\section{Objetivo general}
+
+Implementar un sistema de juego en red con arquitectura cliente-servidor, donde
+un servidor central gestione la conexion de jugadores, el emparejamiento, el
+estado del juego y la comunicacion mediante un protocolo de texto sobre TCP.
+
+\section{Objetivos especificos}
+
+\begin{itemize}
+    \item Implementar un servidor TCP en C para Linux.
+    \item Permitir la conexion de n clientes sin definir un numero maximo fijo en
+    la estructura principal de jugadores.
+    \item Utilizar \texttt{select(2)} para atender multiples sockets sin usar
+    \texttt{fork(2)} ni \texttt{pthread}.
+    \item Definir un protocolo de texto llamado \texttt{TELEGAME/1.0}.
+    \item Registrar jugadores mediante comandos enviados por el cliente.
+    \item Mantener una cola de espera para emparejar jugadores.
+    \item Administrar completamente el juego desde el servidor.
+    \item Mostrar participantes, turnos, tablero, ganador, empate y marcador.
+    \item Documentar comandos, respuestas, automata de estados y estructuras de
+    datos.
+\end{itemize}
+
+\section{Arquitectura del sistema}
+
+El sistema esta formado por un servidor central y varios clientes. Cada cliente
+se conecta al servidor usando TCP. El servidor acepta conexiones, recibe
+comandos, procesa cada solicitud y envia respuestas segun el protocolo.
+
+No existe comunicacion directa entre jugadores. Todas las decisiones del juego
+son tomadas por el servidor central. Esto permite que el servidor mantenga el
+estado oficial del tablero y evite inconsistencias entre clientes.
+
+\subsection{Diagrama general}
+
+\begin{lstlisting}[style=code]
++-----------+        TCP         +---------------------+        TCP        +-----------+
+| Cliente A | <----------------> | Servidor maestro    | <---------------> | Cliente B |
+| Jugador X |                    | select + juego      |                   | Jugador O |
++-----------+                    +---------------------+                   +-----------+
+                                      ^
+                                      |
+                                      | TCP
+                                      |
+                                  +-----------+
+                                  | Cliente N |
+                                  +-----------+
+\end{lstlisting}
+
+\subsection{Responsabilidades del servidor}
+
+\begin{itemize}
+    \item Escuchar en un puerto TCP predefinido.
+    \item Aceptar conexiones de clientes.
+    \item Registrar nombres de jugadores.
+    \item Mantener la lista de jugadores conectados.
+    \item Mantener la cola de espera.
+    \item Crear partidas 1 vs 1.
+    \item Validar comandos y estados.
+    \item Validar turnos y movimientos.
+    \item Determinar victoria, empate o abandono.
+    \item Enviar tablero, turno, resultado y marcador.
+    \item Registrar en consola el intercambio de mensajes.
+\end{itemize}
+
+\subsection{Responsabilidades del cliente}
+
+\begin{itemize}
+    \item Conectarse al servidor central.
+    \item Enviar comandos escritos por el jugador.
+    \item Recibir mensajes del servidor.
+    \item Mostrar el tablero en formato legible.
+    \item Mostrar turnos, participantes, resultados y errores.
+\end{itemize}
+
+\section{Tecnologias utilizadas}
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Elemento} & \textbf{Uso en el proyecto} \\
+\hline
+Lenguaje C & Implementacion del servidor y cliente. \\
+\hline
+Linux Mint & Sistema operativo objetivo para compilar y ejecutar. \\
+\hline
+GCC & Compilador usado mediante el \texttt{Makefile}. \\
+\hline
+Make & Automatiza la compilacion del cliente, servidor y pruebas. \\
+\hline
+Sockets TCP & Comunicacion confiable cliente-servidor. \\
+\hline
+\texttt{select(2)} & Multiplexacion de multiples clientes sin procesos ni hilos. \\
+\hline
+Protocolo de texto & Comandos y respuestas legibles por terminal. \\
+\hline
+\end{longtable}
+
+\section{Estructura del proyecto}
+
+\begin{lstlisting}[style=code]
+.
+|-- Makefile
+|-- README.md
+|-- docs/
+|   |-- RFC-TELEGAME.md
+|   |-- DEFENSA.md
+|   |-- PROMPT_CHATGPT.md
+|   `-- INFORME_TELEGAME.tex
+|-- scripts/
+|   `-- install_telegame_local.sh
+|-- src/
+|   |-- client.c
+|   `-- server.c
+`-- tests/
+    `-- smoke_test.sh
+\end{lstlisting}
+
+\section{Compilacion y ejecucion}
+
+El proyecto incluye un \texttt{Makefile}. Para compilar se ejecuta:
+
+\begin{lstlisting}[style=code]
+make
+\end{lstlisting}
+
+Esto genera los binarios:
+
+\begin{lstlisting}[style=code]
+bin/telegame_server
+bin/telegame_client
+\end{lstlisting}
+
+Para iniciar el servidor:
+
+\begin{lstlisting}[style=code]
+./bin/telegame_server --host 127.0.0.1 --port 5000
+\end{lstlisting}
+
+Para iniciar clientes:
+
+\begin{lstlisting}[style=code]
+./bin/telegame_client --host 127.0.0.1 --port 5000 --name Ramiro
+./bin/telegame_client --host 127.0.0.1 --port 5000 --name Paulo
+./bin/telegame_client --host 127.0.0.1 --port 5000 --name Carla
+\end{lstlisting}
+
+\section{Protocolo TELEGAME/1.0}
+
+El protocolo \texttt{TELEGAME/1.0} es un protocolo de texto sobre TCP. Cada
+mensaje termina con salto de linea \texttt{\textbackslash n}. Esto permite que
+el servidor separe comandos completos aun cuando TCP entregue los bytes por
+partes.
+
+\subsection{Comandos del cliente}
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Comando} & \textbf{Descripcion} \\
+\hline
+\texttt{HELLO <nombre>} & Registra el nombre del jugador. \\
+\hline
+\texttt{HELP} & Lista comandos disponibles. \\
+\hline
+\texttt{QUEUE} & Ingresa a la cola de espera. \\
+\hline
+\texttt{PLAYERS} & Lista participantes conectados y estado. \\
+\hline
+\texttt{SCORE} & Muestra victorias, empates y derrotas. \\
+\hline
+\texttt{BOARD} & Solicita tablero y turno actual. \\
+\hline
+\texttt{MOVE <1-9>} & Realiza una jugada si es el turno del jugador. \\
+\hline
+\texttt{QUIT} & Cierra la sesion o abandona una partida. \\
+\hline
+\end{longtable}
+
+\subsection{Respuestas del servidor}
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Respuesta} & \textbf{Significado} \\
+\hline
+\texttt{WELCOME} & El servidor acepto la conexion. \\
+\hline
+\texttt{OK} & Operacion aceptada. \\
+\hline
+\texttt{ERR} & Operacion rechazada. \\
+\hline
+\texttt{INFO} & Mensaje informativo. \\
+\hline
+\texttt{PLAYER} & Participante conectado y estado. \\
+\hline
+\texttt{SCORE} & Marcador de un jugador. \\
+\hline
+\texttt{MATCH} & Partida creada y simbolo asignado. \\
+\hline
+\texttt{BOARD} & Estado del tablero. \\
+\hline
+\texttt{TURN} & Turno actual. \\
+\hline
+\texttt{RESULT WIN} & Partida terminada con ganador. \\
+\hline
+\texttt{RESULT DRAW} & Partida terminada en empate. \\
+\hline
+\texttt{RESULT ABORT} & Partida terminada por abandono o desconexion. \\
+\hline
+\texttt{BYE} & Cierre normal de sesion. \\
+\hline
+\end{longtable}
+
+\section{Automata de estados del jugador}
+
+El jugador pasa por estados definidos segun su interaccion con el servidor:
+
+\begin{lstlisting}[style=code]
+[DESCONECTADO]
+      |
+      | conexion TCP aceptada
+      v
+[CONECTADO]
+      |
+      | HELLO <nombre>
+      v
+[LOBBY] <--------------------------+
+      |                            |
+      | QUEUE                      | fin de partida
+      v                            |
+[EN_COLA]                          |
+      | servidor encuentra rival   |
+      v                            |
+[EN_PARTIDA] ----------------------+
+      |
+      | QUIT / error / desconexion
+      v
+[DESCONECTADO]
+\end{lstlisting}
+
+\section{Estructuras de datos}
+
+\subsection{\texttt{struct Player}}
+
+La estructura \texttt{Player} representa a cada jugador conectado. Esta
+estructura esta definida en \texttt{src/server.c}, cerca de la linea 24.
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Campo} & \textbf{Rol} \\
+\hline
+\texttt{fd} & Descriptor del socket TCP del cliente. \\
+\hline
+\texttt{address} & Direccion IP del cliente. \\
+\hline
+\texttt{port} & Puerto remoto del cliente. \\
+\hline
+\texttt{name} & Nombre registrado por el jugador. \\
+\hline
+\texttt{registered} & Indica si el jugador ya envio \texttt{HELLO}. \\
+\hline
+\texttt{buffer} & Acumula bytes recibidos hasta formar lineas completas. \\
+\hline
+\texttt{buffer\_len} & Cantidad de bytes usados en el buffer. \\
+\hline
+\texttt{in\_queue} & Indica si el jugador esta esperando rival. \\
+\hline
+\texttt{game\_id} & Identificador de la partida activa o cero si no juega. \\
+\hline
+\texttt{symbol} & Simbolo asignado, \texttt{X} u \texttt{O}. \\
+\hline
+\texttt{wins, losses, draws} & Marcador efimero del jugador. \\
+\hline
+\texttt{next} & Enlace en la lista dinamica de jugadores. \\
+\hline
+\texttt{queue\_next} & Enlace en la cola dinamica de espera. \\
+\hline
+\end{longtable}
+
+\subsection{\texttt{struct Game}}
+
+La estructura \texttt{Game} representa una partida activa. Esta definida en
+\texttt{src/server.c}, cerca de la linea 42.
+
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Campo} & \textbf{Rol} \\
+\hline
+\texttt{id} & Identificador incremental de la partida. \\
+\hline
+\texttt{x\_player} & Jugador que usa el simbolo \texttt{X}. \\
+\hline
+\texttt{o\_player} & Jugador que usa el simbolo \texttt{O}. \\
+\hline
+\texttt{board} & Tablero de nueve posiciones. \\
+\hline
+\texttt{turn} & Simbolo que debe jugar en el turno actual. \\
+\hline
+\texttt{next} & Enlace en la lista de partidas activas. \\
+\hline
+\end{longtable}
+
+\section{Gestion de jugadores y cola}
+
+El servidor mantiene una lista enlazada de jugadores conectados. Esta decision
+evita declarar un arreglo fijo de jugadores dentro de la logica principal. Cada
+nuevo cliente aceptado se convierte en un nodo de la lista.
+
+La cola de espera tambien se implementa con punteros. Cuando un jugador envia
+\texttt{QUEUE}, el servidor verifica que este registrado, que no este en partida
+y que no este ya en cola. Luego lo agrega con \texttt{enqueue\_player}. Cuando
+hay dos jugadores esperando, \texttt{try\_match\_players} los extrae con
+\texttt{dequeue\_player} y crea una partida con \texttt{create\_match}.
+
+\section{Multiplexacion con \texttt{select}}
+
+El servidor usa \texttt{select(2)} en el ciclo principal. En cada iteracion arma
+un conjunto de descriptores que incluye:
+
+\begin{itemize}
+    \item el socket del servidor, para aceptar clientes nuevos;
+    \item todos los sockets de clientes conectados, para leer comandos.
+\end{itemize}
+
+Cuando \texttt{select} informa actividad en el socket del servidor, se llama a
+\texttt{accept\_player}. Cuando informa actividad en un cliente, se llama a
+\texttt{receive\_from\_player}. Esta estrategia permite atender varios clientes
+sin crear procesos ni hilos.
+
+\section{Procesamiento de mensajes}
+
+El servidor recibe bytes por TCP mediante \texttt{recv}. Como TCP es un flujo de
+bytes, un comando puede llegar dividido o varios comandos pueden llegar juntos.
+Por eso cada jugador tiene un \texttt{buffer}. El servidor acumula datos hasta
+encontrar un salto de linea. Luego extrae una linea completa y la procesa como
+comando.
+
+El flujo es:
+
+\begin{enumerate}
+    \item \texttt{receive\_from\_player} recibe bytes.
+    \item \texttt{process\_player\_line} limpia saltos de linea.
+    \item \texttt{handle\_command} identifica el comando.
+    \item Se llama a la funcion concreta: \texttt{handle\_hello},
+    \texttt{handle\_queue}, \texttt{handle\_move}, etc.
+    \item \texttt{send\_line} elabora y envia la respuesta.
+\end{enumerate}
+
+Ademas, el servidor imprime logs de entrada y salida:
+
+\begin{lstlisting}[style=code]
+[RX <- Ramiro] MOVE 5
+[TX -> Paulo] TURN O Paulo
+\end{lstlisting}
+
+Esto ayuda a demostrar en vivo el intercambio de mensajes entre clientes y
+servidor.
+
+\section{Logica del juego}
+
+Cada partida tiene dos jugadores. El primero recibe \texttt{X} y el segundo
+recibe \texttt{O}. Siempre inicia \texttt{X}. El tablero se representa como una
+cadena de nueve caracteres:
+
+\begin{lstlisting}[style=code]
+BOARD X.O...X..
+\end{lstlisting}
+
+Cada posicion corresponde a una casilla:
+
+\begin{lstlisting}[style=code]
+1 | 2 | 3
+---------
+4 | 5 | 6
+---------
+7 | 8 | 9
+\end{lstlisting}
+
+La funcion \texttt{handle\_move} valida:
+
+\begin{itemize}
+    \item que el jugador este en una partida;
+    \item que sea su turno;
+    \item que el movimiento sea un numero entre 1 y 9;
+    \item que la casilla este vacia.
+\end{itemize}
+
+Luego actualiza el tablero, avisa a ambos jugadores y verifica si existe ganador
+o empate. Si la partida termina, ambos jugadores vuelven al estado \texttt{LOBBY}
+y el servidor envia automaticamente participantes y marcador.
+
+\section{Mapa de implementacion}
+
+\begin{longtable}{|p{6cm}|p{8cm}|}
+\hline
+\textbf{Tema} & \textbf{Ubicacion aproximada} \\
+\hline
+Estructura \texttt{Player} & \texttt{src/server.c}, linea 24. \\
+\hline
+Estructura \texttt{Game} & \texttt{src/server.c}, linea 42. \\
+\hline
+Envio de respuestas & \texttt{send\_line}, linea 80. \\
+\hline
+Cola de espera & \texttt{enqueue\_player}, linea 159; \texttt{dequeue\_player}, linea 171. \\
+\hline
+Listado de participantes & \texttt{send\_players\_to}, linea 290. \\
+\hline
+Marcador & \texttt{send\_score\_to}, linea 280. \\
+\hline
+Creacion de partida & \texttt{create\_match}, linea 309. \\
+\hline
+Registro de jugador & \texttt{handle\_hello}, linea 362. \\
+\hline
+Entrada a cola & \texttt{handle\_queue}, linea 375. \\
+\hline
+Validacion de jugadas & \texttt{handle\_move}, linea 403. \\
+\hline
+Interpretacion de comandos & \texttt{handle\_command}, linea 495. \\
+\hline
+Recepcion de mensajes & \texttt{receive\_from\_player}, linea 560. \\
+\hline
+Aceptar clientes & \texttt{accept\_player}, linea 602. \\
+\hline
+Multiplexacion & \texttt{select}, linea 707. \\
+\hline
+Cliente & \texttt{src/client.c}. \\
+\hline
+\end{longtable}
+
+\section{Demostracion recomendada}
+
+Para la demostracion se recomienda abrir cuatro terminales: una para el servidor
+y tres para clientes.
+
+\subsection{Terminal 1: servidor}
+
+\begin{lstlisting}[style=code]
+cd ~/ProyectoTeleinformatica-
+make clean
+make
+./bin/telegame_server --host 127.0.0.1 --port 5000
+\end{lstlisting}
+
+\subsection{Terminal 2: cliente Ramiro}
+
+\begin{lstlisting}[style=code]
+cd ~/ProyectoTeleinformatica-
+./bin/telegame_client --host 127.0.0.1 --port 5000 --name Ramiro
+\end{lstlisting}
+
+\subsection{Terminal 3: cliente Paulo}
+
+\begin{lstlisting}[style=code]
+cd ~/ProyectoTeleinformatica-
+./bin/telegame_client --host 127.0.0.1 --port 5000 --name Paulo
+\end{lstlisting}
+
+\subsection{Terminal 4: cliente Carla}
+
+\begin{lstlisting}[style=code]
+cd ~/ProyectoTeleinformatica-
+./bin/telegame_client --host 127.0.0.1 --port 5000 --name Carla
+\end{lstlisting}
+
+Pasos para mostrar:
+
+\begin{enumerate}
+    \item En Carla escribir \texttt{PLAYERS} para mostrar tres clientes.
+    \item En Ramiro y Paulo escribir \texttt{QUEUE}.
+    \item Mostrar que el servidor asigna \texttt{X} y \texttt{O}.
+    \item Intentar un movimiento fuera de turno.
+    \item Jugar una partida completa.
+    \item Mostrar \texttt{RESULT WIN} o \texttt{RESULT DRAW}.
+    \item Mostrar que al final ambos jugadores vuelven a \texttt{LOBBY}.
+    \item Mostrar el marcador con \texttt{SCORE}.
+\end{enumerate}
+
+\section{Pruebas}
+
+El proyecto incluye una prueba automatica basica:
+
+\begin{lstlisting}[style=code]
+make test
+\end{lstlisting}
+
+La prueba compila el servidor y el cliente, levanta el servidor en
+\texttt{127.0.0.1}, conecta dos jugadores, verifica el registro, prueba un
+movimiento fuera de turno, ejecuta una partida y valida el ganador y el marcador.
+
+\section{Referencias tecnicas}
+
+Las funciones principales investigadas pertenecen a POSIX sockets:
+
+\begin{itemize}
+    \item \texttt{socket(2)}: crea un socket.
+    \item \texttt{setsockopt(2)}: configura opciones como \texttt{SO\_REUSEADDR}.
+    \item \texttt{bind(2)}: asocia IP y puerto.
+    \item \texttt{listen(2)}: pone el socket en modo escucha.
+    \item \texttt{accept(2)}: acepta clientes.
+    \item \texttt{select(2)}: multiplexa descriptores.
+    \item \texttt{recv(2)}: recibe datos.
+    \item \texttt{send(2)}: envia datos.
+    \item \texttt{inet\_pton(3)} e \texttt{inet\_ntop(3)}: convierten direcciones IP.
+\end{itemize}
+
+En Linux Mint se pueden consultar con:
+
+\begin{lstlisting}[style=code]
+man 2 socket
+man 2 bind
+man 2 listen
+man 2 accept
+man 2 select
+man 2 recv
+man 2 send
+man 3 inet_pton
+\end{lstlisting}
+
+\section{Uso de inteligencia artificial}
+
+Durante el desarrollo se utilizo asistencia de IA como apoyo para revisar
+requisitos, ordenar la documentacion, comparar alternativas y preparar material
+de defensa. La IA no reemplaza la comprension del codigo: el estudiante debe
+poder explicar la arquitectura, el protocolo, las estructuras y las funciones
+principales.
+
+Para completar esta seccion con informacion personal, se recomienda indicar:
+
+\begin{itemize}
+    \item que herramienta de IA se utilizo;
+    \item si fue version gratuita o de pago;
+    \item en que partes ayudo;
+    \item que partes fueron revisadas personalmente;
+    \item que aprendizajes quedaron del proyecto.
+\end{itemize}
+
+Ejemplo de redaccion adaptable:
+
+\begin{quote}
+Use una herramienta de inteligencia artificial como apoyo para organizar ideas,
+revisar requisitos y mejorar la documentacion. Los aportes fueron pertinentes
+cuando ayudaron a ordenar el protocolo, identificar funciones importantes y
+preparar la defensa. Sin embargo, fue necesario revisar el codigo y ejecutar las
+pruebas para comprobar que el programa cumpliera los requisitos. El aprendizaje
+principal fue entender como un servidor TCP puede atender varios clientes con
+\texttt{select}, como se disena un protocolo de texto y como se mantiene el
+estado del juego desde un servidor central.
+\end{quote}
+
+\section{Conclusiones}
+
+\begin{itemize}
+    \item El proyecto cumple con una arquitectura cliente-servidor donde el
+    servidor central administra completamente el juego.
+    \item El uso de \texttt{select} permite manejar varios clientes sin usar
+    procesos ni hilos.
+    \item El protocolo de texto facilita la prueba manual, la depuracion y la
+    explicacion durante la defensa.
+    \item Las estructuras \texttt{Player} y \texttt{Game} separan claramente los
+    datos de jugadores y partidas.
+    \item La cola de espera permite emparejar jugadores de forma simple y
+    dinamica.
+    \item El registro y marcador son efimeros, es decir, existen mientras el
+    servidor esta ejecutandose.
+    \item La demostracion con tres clientes permite mostrar que dos pueden jugar
+    mientras otro sigue interactuando con el servidor.
+\end{itemize}
+
+\section{Aprendizajes alcanzados}
+
+\begin{itemize}
+    \item Uso de sockets TCP en C.
+    \item Diferencia entre \texttt{127.0.0.1} para prueba local y
+    \texttt{0.0.0.0} para escuchar desde otras computadoras.
+    \item Manejo de multiples clientes con \texttt{select}.
+    \item Diseno de comandos y respuestas en un protocolo.
+    \item Validacion de estados antes de ejecutar acciones.
+    \item Uso de listas enlazadas para representar jugadores y cola.
+    \item Importancia de documentar el codigo con funciones, estructuras y
+    comportamiento observable.
+\end{itemize}
+
+\end{document}
