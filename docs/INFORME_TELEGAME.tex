@@ -11,7 +11,7 @@
 \usepackage{listings}
 \usepackage{tikz}
 
-\usetikzlibrary{arrows.meta,positioning,shapes.multipart,fit,backgrounds}
+\usetikzlibrary{arrows.meta,positioning,shapes.multipart,fit,backgrounds,babel}
 
 \geometry{margin=2.5cm}
 
@@ -132,9 +132,8 @@ estado oficial del tablero y evite inconsistencias entre clientes.
         inner sep=5pt
     },
     arrow/.style={
-        <->,
-        very thick,
-        -{Stealth[length=3mm]}
+        {Stealth[length=3mm]}-{Stealth[length=3mm]},
+        very thick
     }
 ]
 
